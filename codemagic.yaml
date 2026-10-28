@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v11:
-    name: Rayman Target SDK Fix
+  ios-build-v12:
+    name: Rayman Final Link Fix
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -16,7 +16,7 @@ workflows:
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
-          # -DCMAKE_OSX_SYSROOT=iphoneos explicitly forces the cloud Mac to use the mobile iPad/iPhone libraries
+          # -Iflags tell the C++ compiler exactly where to find the missing recomp header files
           cmake -G "Unix Makefiles" \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
@@ -27,6 +27,8 @@ workflows:
             -DSDL_OPENGL=OFF \
             -DSDL_OPENGLES=OFF \
             -DSDL_OPENGLES2=OFF \
+            -DCMAKE_CXX_FLAGS="-I../recomp -I../recomp/include" \
+            -DCMAKE_C_FLAGS="-I../recomp -I../recomp/include" \
             ..
       - name: Compile and Package App Bundle
         script: |
@@ -35,6 +37,8 @@ workflows:
     artifacts:
       - build/*.app
       - build/Release-iphoneos/*.app
+      - *.app
+
 
 
 
