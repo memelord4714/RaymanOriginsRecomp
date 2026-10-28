@@ -1,20 +1,22 @@
 workflows:
   ios-build:
-    name: Rayman iOS Fixed Build
+    name: Rayman iOS Self-Contained Build
     max_build_duration: 20
     instance_type: mac_mini_m2
     scripts:
-      - name: Install System Dependencies
+      - name: Fetch Portable Dependencies
         script: |
-          brew install cmake sdl3 moltenvk
+          mkdir -p dependencies && cd dependencies
+          # Download portable SDL3 framework for iOS directly
+          curl -L -o sdl3.zip https://github.com
+          unzip sdl3.zip
       - name: Generate Xcode Project
         script: |
           mkdir build && cd build
           cmake -G Xcode \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DUSE_MOLTENVK=ON \
-            -DSDL3_DIR=$(brew --prefix sdl3) \
+            -DSDL3_DIR=$(pwd)/../dependencies/SDL3.xcframework \
             ..
       - name: Build Unsigned App
         script: |
@@ -22,4 +24,5 @@ workflows:
           xcodebuild -project *.xcodeproj -scheme RaymanOrigins -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO
     artifacts:
       - build/Release-iphoneos/*.app
+
 
