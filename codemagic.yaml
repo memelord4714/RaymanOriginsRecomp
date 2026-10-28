@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v17:
-    name: Rayman Hardcoded Path Build
+  ios-build-v18:
+    name: Rayman Direct Folder Inject Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -14,27 +14,18 @@ workflows:
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
-          
-          # Hardcoding absolute folder paths directly into the C++ compiler flags
-          cmake -G "Unix Makefiles" \
-            -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_SYSROOT=iphoneos \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DSDL_DYNAPI=OFF \
-            -DSDL_DYNAMICAPI=OFF \
-            -DSDL_OPENGL=OFF \
-            -DSDL_OPENGLES=OFF \
-            -DSDL_OPENGLES2=OFF \
-            -DCMAKE_CXX_FLAGS="-I/Users/builder/clone/recomp -I/Users/builder/clone/recomp/include -I/Users/builder/clone/runtime" \
-            -DCMAKE_C_FLAGS="-I/Users/builder/clone/recomp -I/Users/builder/clone/recomp/include -I/Users/builder/clone/runtime" \
-            ..
+          cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
       - name: Compile and Package App Bundle
         script: |
+          # Physically copy the critical header file into the runtime folder right before compiling
+          cp -v recomp/include/ppc_recomp_shared.h runtime/ || true
+          cp -v recomp/ppc_recomp_shared.h runtime/ || true
+          
           cd build
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
