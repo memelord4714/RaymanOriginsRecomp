@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v24:
-    name: Rayman Memory Size Final Fix
+  ios-build-v25:
+    name: Rayman Index Pointer Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -20,14 +20,12 @@ workflows:
           find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
           sed -i '' 's/(ctx, g_memory.base)/(\&ctx, g_memory.base)/g' runtime/main.cpp || true
           
-          # Inject the memory size and mapping array structure definitions
           cat << 'EOF' > runtime/ppc_recomp_shared.h
           #ifndef PPC_RECOMP_SHARED_H
           #define PPC_RECOMP_SHARED_H
           #include <stdint.h>
           #include <stddef.h>
           
-          // Define Xbox 360's native 512MB memory size constant
           #define PPC_MEMORY_SIZE (512 * 1024 * 1024)
           
           union PPCRegister {
@@ -43,17 +41,16 @@ workflows:
           
           typedef void (PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
           
-          // Structure matching runtime/memory.cpp loop layout
           struct PPCFuncMapping {
               uint32_t guest;
               PPCFunc* host;
           };
           
-          // Allocate an empty terminal map array to satisfy compilation loops
           static const PPCFuncMapping PPCFuncMappings[] = { {0, NULL} };
           
           extern PPCFunc* g_ppc_functions[];
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
+          
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
           
           #endif
           EOF
@@ -62,6 +59,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
