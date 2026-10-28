@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v7:
-    name: Rayman Universal Makefile Build
+  ios-build-v8:
+    name: Rayman SDL Heavy Fix
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -14,20 +14,21 @@ workflows:
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
-          # Switch generator to Unix Makefiles (Always installed on macOS)
+          # -DSDL_DYNAMICAPI=OFF disables the broken dynamic animation callbacks causing the crash
           cmake -G "Unix Makefiles" \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DBUILD_SHARED_LIBS=OFF \
+            -DSDL_DYNAMICAPI=OFF \
             ..
       - name: Compile and Package App Bundle
         script: |
           cd build
-          # Compile natively using standard make threads
           cmake --build . --config Release
     artifacts:
       - build/*.app
       - build/Release-iphoneos/*.app
+
 
 
 
