@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v16:
-    name: Rayman Absolute Path Fix
+  ios-build-v17:
+    name: Rayman Hardcoded Path Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -11,32 +11,31 @@ workflows:
           if [ ! -f recomp/ppc/ppc_func_mapping.cpp ]; then echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp; fi
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.c
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.h
-          
-          # Find the exact folder where ppc_recomp_shared.h lives and copy it into the runtime directory
-          HEADER_PATH=$(find . -name "ppc_recomp_shared.h" | head -n 1)
-          if [ ! -z "$HEADER_PATH" ]; then cp -v "$HEADER_PATH" runtime/; fi
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
           
-          # Using Codemagic's official environment variable ($CM_WORKSPACE)
-          export CPATH="$CM_WORKSPACE/recomp:$CM_WORKSPACE/recomp/include:$CM_WORKSPACE/runtime"
-          export C_INCLUDE_PATH="$CPATH"
-          export CPLUS_INCLUDE_PATH="$CPATH"
-          
-          cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
+          # Hardcoding absolute folder paths directly into the C++ compiler flags
+          cmake -G "Unix Makefiles" \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DSDL_DYNAPI=OFF \
+            -DSDL_DYNAMICAPI=OFF \
+            -DSDL_OPENGL=OFF \
+            -DSDL_OPENGLES=OFF \
+            -DSDL_OPENGLES2=OFF \
+            -DCMAKE_CXX_FLAGS="-I/Users/builder/clone/recomp -I/Users/builder/clone/recomp/include -I/Users/builder/clone/runtime" \
+            -DCMAKE_C_FLAGS="-I/Users/builder/clone/recomp -I/Users/builder/clone/recomp/include -I/Users/builder/clone/runtime" \
+            ..
       - name: Compile and Package App Bundle
         script: |
           cd build
-          
-          # Enforcing the path variable using the correct $CM_WORKSPACE identifier
-          export CPATH="$CM_WORKSPACE/recomp:$CM_WORKSPACE/recomp/include:$CM_WORKSPACE/runtime"
-          export C_INCLUDE_PATH="$CPATH"
-          export CPLUS_INCLUDE_PATH="$CPATH"
-          
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
