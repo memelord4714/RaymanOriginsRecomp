@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v25:
-    name: Rayman Index Pointer Build
+  ios-build-v26:
+    name: Rayman Register Completion Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -34,8 +34,12 @@ workflows:
           };
           
           struct PPCContext {
+              PPCRegister r1;
               PPCRegister r3;
-              uint64_t dummy; 
+              PPCRegister r4;
+              PPCRegister r5;
+              PPCRegister r31;
+              uint64_t lr;
               uint32_t nip;
           };
           
@@ -50,7 +54,7 @@ workflows:
           
           extern PPCFunc* g_ppc_functions[];
           
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
           
           #endif
           EOF
@@ -59,6 +63,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
