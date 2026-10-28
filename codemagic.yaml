@@ -1,9 +1,13 @@
-workflows: 
-  ios-build-v2:
-    name: Rayman Ultimate Brute Force
+workflows:
+  ios-build-v3:
+    name: Rayman Submodule Force Fix
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
+      - name: Sync Missing Subfolders
+        script: |
+          # Force the cloud computer to deeply pull the missing Xbox translation folders
+          git submodule update --init --recursive --force
       - name: Configure Internal Engine Dependencies
         script: |
           mkdir build && cd build
@@ -19,3 +23,4 @@ workflows:
           xcodebuild -project *.xcodeproj -scheme RaymanOrigins -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
     artifacts:
       - build/Release-iphoneos/*.app
+
