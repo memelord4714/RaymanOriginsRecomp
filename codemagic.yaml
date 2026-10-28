@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v30:
-    name: Rayman Floating Point Complete Build
+  ios-build-v29:
+    name: Rayman Array Index Final Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -33,7 +33,6 @@ workflows:
               uint32_t u32;
           };
           
-          // Added float union type to support the targeted .f64 calls
           union PPCFloatRegister {
               double f64;
               uint64_t u64;
@@ -51,7 +50,6 @@ workflows:
               PPCRegister r10;
               PPCRegister r31;
               
-              // Full mapping of required floating-point math registers
               PPCFloatRegister f1;
               PPCFloatRegister f2;
               PPCFloatRegister f3;
@@ -81,7 +79,8 @@ workflows:
           
           extern PPCFunc* g_ppc_functions[];
           
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
+          // Indexing [0] changes this from an array object to a mutable pointer slot
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
           
           #endif
           EOF
@@ -90,6 +89,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
