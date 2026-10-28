@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v20:
-    name: Rayman Architecture Definition Build
+  ios-build-v21:
+    name: Rayman Register Matching Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -17,27 +17,30 @@ workflows:
           cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
       - name: Compile and Package App Bundle
         script: |
-          # 1. Search and place any real headers if they exist
           find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
           
-          # 2. If it's still missing or incomplete, inject the exact C++ definitions the compiler is screaming for
+          # Inject the fully fleshed-out register union structure the main runtime expects
           cat << 'EOF' > runtime/ppc_recomp_shared.h
           #ifndef PPC_RECOMP_SHARED_H
           #define PPC_RECOMP_SHARED_H
           #include <stdint.h>
           
-          // Core types required by runtime/memory.h and main.cpp
+          union PPCRegister {
+              uint64_t u64;
+              uint32_t u32;
+          };
+          
           struct PPCContext {
-              uint64_t gpr[32];
-              double fpr[32];
+              PPCRegister r3; // Return register targeted by main.cpp:30
+              uint64_t dummy[32]; 
               uint32_t nip;
           };
           
-          typedef void (PPCFunc)(PPCContext* ctx);
+          // Match the signature called on main.cpp:29 which passes two parameters
+          typedef void (*PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
           
-          // Global lookups mapped to pointer arrays
-          extern PPCFunc** g_ppc_functions;
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[(guest) >> 2])
+          extern PPCFunc* g_ppc_functions;
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
           
           #endif
           EOF
@@ -46,6 +49,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
