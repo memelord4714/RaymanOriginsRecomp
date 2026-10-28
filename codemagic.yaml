@@ -1,33 +1,30 @@
 workflows:
-  ios-build-v4:
-    name: Rayman Override Compiling
+  ios-build-v5:
+    name: Rayman Ninja Compile
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
       - name: Force Create Missing Code Links
         script: |
-          # Create the missing directories if they don't exist
           mkdir -p recomp/ppc
-          
-          # Inject a dummy placeholder to trick the CMake generator script
           echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp
-          
-          # Pull down the submodule components
           git submodule update --init --recursive --force
       - name: Configure Internal Engine Dependencies
         script: |
           mkdir -p build && cd build
-          cmake -G Xcode \
+          # Switch the generator from -G Xcode to -G Ninja
+          cmake -G Ninja \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DBUILD_SHARED_LIBS=OFF \
-            -DXENON_RECOMP_BUILD_RECOMP=OFF \
             ..
       - name: Compile and Package App Bundle
         script: |
           cd build
-          xcodebuild -project *.xcodeproj -scheme RaymanOrigins -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          # Use cmake's native builder instead of Xcode's compiler tool
+          cmake --build . --config Release
     artifacts:
-      - build/Release-iphoneos/*.app
+      - build/*.app
+
 
 
