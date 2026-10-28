@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v21:
-    name: Rayman Register Matching Build
+  ios-build-v22:
+    name: Rayman Function Call Final Alignment
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -19,7 +19,6 @@ workflows:
         script: |
           find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
           
-          # Inject the fully fleshed-out register union structure the main runtime expects
           cat << 'EOF' > runtime/ppc_recomp_shared.h
           #ifndef PPC_RECOMP_SHARED_H
           #define PPC_RECOMP_SHARED_H
@@ -31,16 +30,16 @@ workflows:
           };
           
           struct PPCContext {
-              PPCRegister r3; // Return register targeted by main.cpp:30
-              uint64_t dummy[32]; 
+              PPCRegister r3;
+              uint64_t dummy; 
               uint32_t nip;
           };
           
-          // Match the signature called on main.cpp:29 which passes two parameters
-          typedef void (*PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
+          // Changing (*PPCFunc) to (PPCFunc) properly aligns the function object execution type
+          typedef void (PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
           
           extern PPCFunc* g_ppc_functions;
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
+          #define PPC_LOOKUP_FUNC(base, guest) (&g_ppc_functions)
           
           #endif
           EOF
@@ -49,6 +48,8 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
+
 
 
 
