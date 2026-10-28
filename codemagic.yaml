@@ -1,30 +1,39 @@
 workflows:
-  ios-build-v14:
-    name: Rayman Header Hard Copy Build
+  ios-build-v15:
+    name: Rayman Global Path Injection Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
-      - name: Sync Code and Overwrite Broken Files
+      - name: Sync Code and Setup Placeholder
         script: |
           git submodule update --init --recursive --force
           mkdir -p recomp/ppc
           if [ ! -f recomp/ppc/ppc_func_mapping.cpp ]; then echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp; fi
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.c
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.h
-          
-          # Forcefully copy the missing framework headers directly into the active runtime source directory
-          cp -v recomp/ppc_recomp_shared.h runtime/ || true
-          cp -v recomp/include/ppc_recomp_shared.h runtime/ || true
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
+          
+          # Injecting absolute system paths directly into the Mac compiler environment variables
+          export CPATH="$WORKSPACE/recomp:$WORKSPACE/recomp/include:$WORKSPACE/runtime"
+          export C_INCLUDE_PATH="$CPATH"
+          export CPLUS_INCLUDE_PATH="$CPATH"
+          
           cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
       - name: Compile and Package App Bundle
         script: |
           cd build
+          
+          # Enforcing the same global system path injection right before the compiler matches the final links
+          export CPATH="$WORKSPACE/recomp:$WORKSPACE/recomp/include:$WORKSPACE/runtime"
+          export C_INCLUDE_PATH="$CPATH"
+          export CPLUS_INCLUDE_PATH="$CPATH"
+          
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
