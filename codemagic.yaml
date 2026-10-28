@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v28:
-    name: Rayman Full Register Sweep Build
+  ios-build-v29:
+    name: Rayman Array Index Final Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -38,11 +38,11 @@ workflows:
               PPCRegister r3;
               PPCRegister r4;
               PPCRegister r5;
-              PPCRegister r6;   // Added to fix the stub_log.cpp crash!
-              PPCRegister r7;   // Failsafe
-              PPCRegister r8;   // Failsafe
-              PPCRegister r9;   // Failsafe
-              PPCRegister r10;  // Failsafe
+              PPCRegister r6;
+              PPCRegister r7;
+              PPCRegister r8;
+              PPCRegister r9;
+              PPCRegister r10;
               PPCRegister r31;
               uint64_t lr;
               uint32_t nip;
@@ -59,7 +59,7 @@ workflows:
           
           extern PPCFunc* g_ppc_functions[];
           
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
           
           #endif
           EOF
@@ -68,6 +68,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
