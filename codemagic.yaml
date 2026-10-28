@@ -1,26 +1,21 @@
 workflows:
-  ios-build-v6:
-    name: Rayman Clean Xcode Build
+  ios-build-v7:
+    name: Rayman Universal Makefile Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
-      - name: Sync Code and Setup Placeholder Cleanly
+      - name: Sync Code and Setup Placeholder
         script: |
-          # 1. Clear out any junk and fetch the real files first
           git submodule update --init --recursive --force
-          
-          # 2. Safely create the path and placeholder without duplicating the index
           mkdir -p recomp/ppc
           if [ ! -f recomp/ppc/ppc_func_mapping.cpp ]; then
             echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp
           fi
       - name: Configure Internal Engine Dependencies
         script: |
-          # Force clean the build directory
           rm -rf build && mkdir build && cd build
-          
-          # Use standard Xcode back with correct targets
-          cmake -G Xcode \
+          # Switch generator to Unix Makefiles (Always installed on macOS)
+          cmake -G "Unix Makefiles" \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DBUILD_SHARED_LIBS=OFF \
@@ -28,8 +23,10 @@ workflows:
       - name: Compile and Package App Bundle
         script: |
           cd build
-          xcodebuild -project *.xcodeproj -scheme RaymanOrigins -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          # Compile natively using standard make threads
+          cmake --build . --config Release
     artifacts:
+      - build/*.app
       - build/Release-iphoneos/*.app
 
 
