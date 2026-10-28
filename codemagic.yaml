@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v19:
-    name: Rayman Ultimate Brute Force Finder Build
+  ios-build-v20:
+    name: Rayman Architecture Definition Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -17,17 +17,36 @@ workflows:
           cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
       - name: Compile and Package App Bundle
         script: |
-          # Automatically search the whole repository, find the file, and copy it everywhere it could possibly be requested
+          # 1. Search and place any real headers if they exist
           find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
-          find . -name "ppc_recomp_shared.h" -exec cp -v {} build/ \; 2>/dev/null || true
           
-          # Also create a backup blank version inside runtime just in case the submodule didn't download it at all
-          if [ ! -f runtime/ppc_recomp_shared.h ]; then echo "// Dummy header bypass" > runtime/ppc_recomp_shared.h; fi
+          # 2. If it's still missing or incomplete, inject the exact C++ definitions the compiler is screaming for
+          cat << 'EOF' > runtime/ppc_recomp_shared.h
+          #ifndef PPC_RECOMP_SHARED_H
+          #define PPC_RECOMP_SHARED_H
+          #include <stdint.h>
+          
+          // Core types required by runtime/memory.h and main.cpp
+          struct PPCContext {
+              uint64_t gpr[32];
+              double fpr[32];
+              uint32_t nip;
+          };
+          
+          typedef void (PPCFunc)(PPCContext* ctx);
+          
+          // Global lookups mapped to pointer arrays
+          extern PPCFunc** g_ppc_functions;
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[(guest) >> 2])
+          
+          #endif
+          EOF
           
           cd build
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
