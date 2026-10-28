@@ -1,22 +1,26 @@
 workflows:
-  ios-build-v15:
-    name: Rayman Global Path Injection Build
+  ios-build-v16:
+    name: Rayman Absolute Path Fix
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
-      - name: Sync Code and Setup Placeholder
+      - name: Sync Code and Overwrite Broken Files
         script: |
           git submodule update --init --recursive --force
           mkdir -p recomp/ppc
           if [ ! -f recomp/ppc/ppc_func_mapping.cpp ]; then echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp; fi
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.c
           echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.h
+          
+          # Find the exact folder where ppc_recomp_shared.h lives and copy it into the runtime directory
+          HEADER_PATH=$(find . -name "ppc_recomp_shared.h" | head -n 1)
+          if [ ! -z "$HEADER_PATH" ]; then cp -v "$HEADER_PATH" runtime/; fi
       - name: Configure Internal Engine Dependencies
         script: |
           rm -rf build && mkdir build && cd build
           
-          # Injecting absolute system paths directly into the Mac compiler environment variables
-          export CPATH="$WORKSPACE/recomp:$WORKSPACE/recomp/include:$WORKSPACE/runtime"
+          # Using Codemagic's official environment variable ($CM_WORKSPACE)
+          export CPATH="$CM_WORKSPACE/recomp:$CM_WORKSPACE/recomp/include:$CM_WORKSPACE/runtime"
           export C_INCLUDE_PATH="$CPATH"
           export CPLUS_INCLUDE_PATH="$CPATH"
           
@@ -25,14 +29,15 @@ workflows:
         script: |
           cd build
           
-          # Enforcing the same global system path injection right before the compiler matches the final links
-          export CPATH="$WORKSPACE/recomp:$WORKSPACE/recomp/include:$WORKSPACE/runtime"
+          # Enforcing the path variable using the correct $CM_WORKSPACE identifier
+          export CPATH="$CM_WORKSPACE/recomp:$CM_WORKSPACE/recomp/include:$CM_WORKSPACE/runtime"
           export C_INCLUDE_PATH="$CPATH"
           export CPLUS_INCLUDE_PATH="$CPATH"
           
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
