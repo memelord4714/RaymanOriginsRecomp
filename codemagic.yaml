@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v26:
-    name: Rayman Register Completion Build
+  ios-build-v27:
+    name: Rayman Final Unified Alignment Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -54,7 +54,7 @@ workflows:
           
           extern PPCFunc* g_ppc_functions[];
           
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions)
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
           
           #endif
           EOF
@@ -63,6 +63,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
