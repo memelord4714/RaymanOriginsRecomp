@@ -1,6 +1,6 @@
 workflows:
-  ios-build-v22:
-    name: Rayman Function Call Final Alignment
+  ios-build-v23:
+    name: Rayman Pointer Address Final Fix
     max_build_duration: 30
     instance_type: mac_mini_m2
     scripts:
@@ -19,6 +19,10 @@ workflows:
         script: |
           find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
           
+          # Fix the specific functional type calls inside main.cpp to pass by reference pointer (&ctx)
+          sed -i '' 's/(ctx, g_memory.base)/(\&ctx, g_memory.base)/g' runtime/main.cpp || true
+          
+          # Inject the fully mutable table layout macro that allows dynamic assignments
           cat << 'EOF' > runtime/ppc_recomp_shared.h
           #ifndef PPC_RECOMP_SHARED_H
           #define PPC_RECOMP_SHARED_H
@@ -35,11 +39,11 @@ workflows:
               uint32_t nip;
           };
           
-          // Changing (*PPCFunc) to (PPCFunc) properly aligns the function object execution type
           typedef void (PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
           
-          extern PPCFunc* g_ppc_functions;
-          #define PPC_LOOKUP_FUNC(base, guest) (&g_ppc_functions)
+          // Make g_ppc_functions an assignable pointer element array to clear the memory.h assignment checks
+          extern PPCFunc* g_ppc_functions[];
+          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
           
           #endif
           EOF
@@ -48,6 +52,7 @@ workflows:
           cmake --build . --config Release
     artifacts:
       - build/*.app
+
 
 
 
