@@ -1,16 +1,25 @@
 workflows:
   ios-build:
-    name: Rayman iOS Build
-    max_build_duration: 15
+    name: Rayman iOS Fixed Build
+    max_build_duration: 20
     instance_type: mac_mini_m2
     scripts:
+      - name: Install System Dependencies
+        script: |
+          brew install cmake sdl3 moltenvk
       - name: Generate Xcode Project
         script: |
           mkdir build && cd build
-          cmake -G Xcode -DCMAKE_SYSTEM_NAME=iOS ..
+          cmake -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DUSE_MOLTENVK=ON \
+            -DSDL3_DIR=$(brew --prefix sdl3) \
+            ..
       - name: Build Unsigned App
         script: |
           cd build
           xcodebuild -project *.xcodeproj -scheme RaymanOrigins -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO
     artifacts:
       - build/Release-iphoneos/*.app
+
