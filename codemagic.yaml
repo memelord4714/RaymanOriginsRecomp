@@ -1,12 +1,3 @@
-workflows:
-  ios-rayman-recomp:
-    name: Rayman Origins Recomp iOS Build
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-    environment:
-      xcode: latest
-      vars:
-        BUNDLE_ID: "com.yourname.raymanoriginsrecomp"
     scripts:
       - name: Initialize and Sync Submodules
         script: |
@@ -15,8 +6,24 @@ workflows:
       - name: Patch C++ Source for iOS Compatibility
         script: |
           echo "Patching macro definitions for iOS cross-compilation..."
-          # Fix missing global context refs inside the static recompilation kernel layer
           sed -i '' 's/HostToGuestFunction<function>(ctx, base)/HostToGuestFunction<function>(nullptr, nullptr)/g' runtime/kernel/function.h
+
+      - name: Build Recompiler Generator Utility
+        script: |
+          echo "Building the host recompiler tool to generate source files..."
+          # The recompiler engine itself must be built for the macOS build machine first, NOT iOS
+          mkdir -p tools_build
+          cd tools_build
+          cmake .. -DBUILD_RECOMPILER_ONLY=ON
+          cmake --build . --config Release --target recompiler
+          
+      - name: Run Recompiler to Generate Source Files
+        script: |
+          echo "Generating ppc_func_mapping.cpp..."
+          # Execute the compiled tool to generate the missing source files.
+          # Note: This step typically requires you to provide the original game files/ROM 
+          # in the path specified by the project documentation.
+          ./tools_build/recompiler --output ./recomp/ppc/
           
       - name: Configure CMake for iOS Target
         script: |
@@ -32,10 +39,7 @@ workflows:
         script: |
           cd build
           cmake --build . --config Release --target rayman
-          
-    artifacts:
-      - build/**/*.ipa
-      - build/**/*.app
+
 
 
 
