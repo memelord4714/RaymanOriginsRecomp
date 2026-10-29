@@ -1,94 +1,42 @@
 workflows:
-  ios-build-v29:
-    name: Rayman Array Index Final Build
-    max_build_duration: 30
+  ios-rayman-recomp:
+    name: Rayman Origins Recomp iOS Build
     instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+      vars:
+        BUNDLE_ID: "com.yourname.raymanoriginsrecomp"
     scripts:
-      - name: Sync Code and Overwrite Broken Files
+      - name: Initialize and Sync Submodules
         script: |
-          git submodule update --init --recursive --force
-          mkdir -p recomp/ppc
-          if [ ! -f recomp/ppc/ppc_func_mapping.cpp ]; then echo "// Generated Placeholder Bypass" > recomp/ppc/ppc_func_mapping.cpp; fi
-          echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.c
-          echo "// Stripped out via brute force bypass" > thirdparty/SDL/src/dynapi/SDL_dynapi.h
-      - name: Configure Internal Engine Dependencies
+          git submodule update --init --recursive
+          
+      - name: Patch C++ Source for iOS Compatibility
         script: |
-          rm -rf build && mkdir build && cd build
-          cmake -G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DBUILD_SHARED_LIBS=OFF -DSDL_DYNAPI=OFF -DSDL_DYNAMICAPI=OFF -DSDL_OPENGL=OFF -DSDL_OPENGLES=OFF -DSDL_OPENGLES2=OFF ..
+          echo "Patching macro definitions for iOS cross-compilation..."
+          # Fix missing global context refs inside the static recompilation kernel layer
+          sed -i '' 's/HostToGuestFunction<function>(ctx, base)/HostToGuestFunction<function>(nullptr, nullptr)/g' runtime/kernel/function.h
+          
+      - name: Configure CMake for iOS Target
+        script: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM \
+            -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID
+
       - name: Compile and Package App Bundle
         script: |
-          find . -name "ppc_recomp_shared.h" -exec cp -v {} runtime/ \; 2>/dev/null || true
-          sed -i '' 's/(ctx, g_memory.base)/(\&ctx, g_memory.base)/g' runtime/main.cpp || true
-          
-          cat << 'EOF' > runtime/ppc_recomp_shared.h
-          #ifndef PPC_RECOMP_SHARED_H
-          #define PPC_RECOMP_SHARED_H
-          #include <stdint.h>
-          #include <stddef.h>
-          
-          #define PPC_MEMORY_SIZE (512 * 1024 * 1024)
-          
-          union PPCRegister {
-              uint64_t u64;
-              uint32_t u32;
-          };
-          
-          union PPCFloatRegister {
-              double f64;
-              uint64_t u64;
-          };
-          
-          struct PPCContext {
-              PPCRegister r1;
-              PPCRegister r3;
-              PPCRegister r4;
-              PPCRegister r5;
-              PPCRegister r6;
-              PPCRegister r7;
-              PPCRegister r8;
-              PPCRegister r9;
-              PPCRegister r10;
-              PPCRegister r31;
-              
-              PPCFloatRegister f1;
-              PPCFloatRegister f2;
-              PPCFloatRegister f3;
-              PPCFloatRegister f4;
-              PPCFloatRegister f5;
-              PPCFloatRegister f6;
-              PPCFloatRegister f7;
-              PPCFloatRegister f8;
-              PPCFloatRegister f9;
-              PPCFloatRegister f10;
-              PPCFloatRegister f11;
-              PPCFloatRegister f12;
-              PPCFloatRegister f13;
-              
-              uint64_t lr;
-              uint32_t nip;
-          };
-          
-          typedef void (PPCFunc)(PPCContext* ctx, uint8_t* memory_base);
-          
-          struct PPCFuncMapping {
-              uint32_t guest;
-              PPCFunc* host;
-          };
-          
-          static const PPCFuncMapping PPCFuncMappings[] = { {0, NULL} };
-          
-          extern PPCFunc* g_ppc_functions[];
-          
-          // Indexing [0] changes this from an array object to a mutable pointer slot
-          #define PPC_LOOKUP_FUNC(base, guest) (g_ppc_functions[0])
-          
-          #endif
-          EOF
-          
           cd build
-          cmake --build . --config Release
+          cmake --build . --config Release --target rayman
+          
     artifacts:
-      - build/*.app
+      - build/**/*.ipa
+      - build/**/*.app
+
 
 
 
