@@ -5,6 +5,10 @@ workflows:
     max_build_duration: 60
     environment:
       xcode: latest
+      vars:
+        # Secure variables are loaded automatically if configured in the UI,
+        # but you can also list your group here if using variable groups.
+        XCODE_SCHEME: "rayman"
     scripts:
       - name: Initialize and Sync Submodules
         script: |
@@ -15,6 +19,16 @@ workflows:
           echo "Fixing compiler macro issues..."
           sed -i '' 's/HostToGuestFunction<function>(ctx, base)/HostToGuestFunction<function>(nullptr, nullptr)/g' runtime/kernel/function.h
 
+      - name: Download and Extract Original Game Assets
+        script: |
+          echo "Fetching private game assets from secure variable link..."
+          mkdir -p game
+          # Downloads your zip securely into the build instance
+          curl -L -o game_assets.zip "$GAME_ASSETS_URL"
+          # Unzips the game files (default.xex) directly into the target folder
+          unzip game_assets.zip -d ./game/
+          rm game_assets.zip
+
       - name: Build Recompiler Tool on Mac Host
         script: |
           echo "Building the desktop recompiler backend tool..."
@@ -23,15 +37,13 @@ workflows:
           cmake .. -DBUILD_RECOMPILER_ONLY=ON
           cmake --build . --config Release
 
-      - name: Run Recompiler to Generate Missing Source Files
+      - name: Run Recompiler to Decompile Game Binary
         script: |
-          echo "Creating ppc_func_mapping.cpp..."
+          echo "Processing default.xex to generate real C++ source files..."
           mkdir -p recomp/ppc
-          # This forces the tool to output the missing files CMake is looking for
-          ./tools_build/recompiler --output ./recomp/ppc/ || echo "Proceeding anyway..."
-          
-          # Emergency fallback: If the tool fails without game assets, create an empty file so CMake doesn't crash
-          touch recomp/ppc/ppc_func_mapping.cpp
+          # Point the tool to your extracted game folder or default.xex path
+          # (Adjust the input flag syntax if the repository uses a specific flag like --input)
+          ./tools_build/recompiler --input ./game/default.xex --output ./recomp/ppc/
 
       - name: Configure CMake for iOS Target
         script: |
@@ -50,6 +62,7 @@ workflows:
     artifacts:
       - build/**/*.ipa
       - build/**/*.app
+
 
 
 
